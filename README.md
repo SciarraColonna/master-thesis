@@ -1,3 +1,3 @@
-## **Master thesis**
+# **Master thesis**
 
 Work in progress...
