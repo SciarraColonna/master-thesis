@@ -5,8 +5,8 @@ import random
 
 
 PATHS = {
-    "train": "../data/UCI-HAR/train/",
-    "test": "../data/UCI-HAR/test/"
+    "train": "data/UCI-HAR/train/",
+    "test": "data/UCI-HAR/test/"
 }
 
 NUM_CONCEPTS = 3
@@ -50,7 +50,6 @@ def get_centroids ():
     # The centroids are sorted in order to facilitate the cluster asignment
     centroids, _ = torch.sort(centroids, dim=0)
 
-    print(centroids)
     return centroids
 
 

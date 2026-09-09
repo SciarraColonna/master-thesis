@@ -43,7 +43,7 @@ class SignalEncoder (nn.Module):
         self.activation = nn.ReLU()
         self.pooling = nn.MaxPool1d(kernel_size=2)
         self.batchNorm1 = nn.BatchNorm1d(num_features=32, affine=True)
-        self.batchNorm1 = nn.BatchNorm1d(num_features=16, affine=True)
+        self.batchNorm2 = nn.BatchNorm1d(num_features=16, affine=True)
         self.globAvgPoolong = nn.AdaptiveAvgPool1d(1)
 
     def forward (self, x):
@@ -96,6 +96,8 @@ class TaskHead (nn.Module):
         else:
             self.dense1 = nn.Linear(in_features=ENCODER_OUT_DIM, out_features=LATENT_DIM)
         self.dense2 = nn.Linear(in_features=LATENT_DIM, out_features=DATA_PARAMS["num_classes"])
+
+        #self.dropout = nn.Dropout(0.5)
         self.activation = nn.ReLU()
 
 

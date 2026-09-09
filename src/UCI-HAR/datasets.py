@@ -25,8 +25,8 @@ DATA_PARAMS = {
 }
 
 data_path = {
-    "train": "../data/UCI-HAR/train/",
-    "test": "../data/UCI-HAR/test/"
+    "train": "data/UCI-HAR/train/",
+    "test": "data/UCI-HAR/test/"
 }
 
 signals_path = [
