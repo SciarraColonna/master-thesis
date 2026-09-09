@@ -94,13 +94,13 @@ class HARDataset (Dataset):
         return len(self.labels)
 
     def __getitem__ (self, idx):
-        # item: [128, 9]
-        item = self.data[idx, :, :]
-        # item: [9, 128] -> the channel dimension is the first being the depth of the input data
-        item = np.transpose(item)
+        # sample: [128, 9]
+        sample = self.data[idx, :, :]
+        # sample: [9, 128] -> the channel dimension is the first being the depth of the input data
+        sample = np.transpose(sample)
         label = torch.tensor(self.labels[idx] - 1, dtype=torch.long)
 
-        return item, label
+        return sample, label
 
 
 """
@@ -128,11 +128,11 @@ class ConceptHARDataset (Dataset):
         return len(self.labels)
 
     def __getitem__ (self, idx):
-        # item: [128, 9]
-        item = self.data[idx, :, :]
-        # item: [9, 128] -> the channel dimension is the first being the depth of the input data
-        item = np.transpose(item)
+        # sample: [128, 9]
+        sample = self.data[idx, :, :]
+        # sample: [9, 128] -> the channel dimension is the first being the depth of the input data
+        sample = np.transpose(sample)
         label = torch.tensor(self.labels[idx] - 1, dtype=torch.long)
         item_concepts = torch.from_numpy(self.concepts[idx])
 
-        return item, label, item_concepts
+        return sample, label, item_concepts
