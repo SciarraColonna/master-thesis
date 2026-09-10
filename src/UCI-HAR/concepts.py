@@ -10,6 +10,7 @@ PATHS = {
 }
 
 NUM_CONCEPTS = 3
+CONCEPTS_LAYER_DIM = 5
 WINDOW_TIMESTEPS = 128
 K = 3
 
@@ -37,7 +38,7 @@ def get_centroids ():
     # Initialization of the centroids
     centroids = torch.tensor(random.sample(variances, K)).view((K, 1))
 
-    for j in range(0, num_iterations):
+    for _ in range(0, num_iterations):
         # Euclidean distance between each variance and each centroid
         distances = torch.cdist(variances_tensor, centroids)
         _, cluster_labels = torch.min(distances, dim=1)
@@ -74,7 +75,7 @@ def concept_labeling (type, centroids):
     tot_acc_y = np.loadtxt("{0}Inertial Signals/total_acc_y_{1}.txt".format(PATHS[type], type))
     tot_acc_z = np.loadtxt("{0}Inertial Signals/total_acc_z_{1}.txt".format(PATHS[type], type))
 
-    concepts = np.empty((len(activities), NUM_CONCEPTS))
+    concepts = np.empty((len(activities), CONCEPTS_LAYER_DIM))
 
     for idx in range(0, len(concepts)):
         # Labeling dynamic (1) or static (0) for classes [1, 3] and [4, 6]
@@ -100,7 +101,7 @@ def concept_labeling (type, centroids):
         # Labeling the "energy level" of the X component of the body acceleration, categorizing it with respect to
         # three possible values (0, 1 and 2 for low, medium and high)
         if activities[idx] > 3:
-            concepts[idx][2] = 0
+            energy_level = 0
         else:
             variance = np.std(tot_acc_x[idx])
 
@@ -108,7 +109,13 @@ def concept_labeling (type, centroids):
             for i in range(0, K):
                 distances[i] = abs(centroids[i] - variance)
 
-            concepts[idx][2] = np.argmin(distances)
+            energy_level = np.argmin(distances)
+
+        for level in range(0, 3):
+            if level == int(energy_level):
+                concepts[idx][level + 2] = 1
+            else:
+                concepts[idx][level + 2] = 0
 
 
     # The calculated concepts are written on the related txt file

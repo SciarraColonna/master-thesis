@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
+
 from datasets import DATA_PARAMS
+from concepts import CONCEPTS_LAYER_DIM
 
 
 ENCODER_OUT_DIM = 16
@@ -67,11 +69,11 @@ class ConceptHead (nn.Module):
     def __init__ (self):
         super().__init__()
 
-        self.dense1 = nn.Linear(in_features=ENCODER_OUT_DIM, out_features=3)
+        self.dense1 = nn.Linear(in_features=ENCODER_OUT_DIM, out_features=CONCEPTS_LAYER_DIM)
         self.activation = nn.ReLU()
 
     def forward (self, x):
-        x = self.activation(self.dense1(x))
+        x = self.dense1(x)
 
         return x
 
@@ -92,7 +94,7 @@ class TaskHead (nn.Module):
         super().__init__()
 
         if concepts:
-            self.dense1 = nn.Linear(in_features=3, out_features=LATENT_DIM)
+            self.dense1 = nn.Linear(in_features=CONCEPTS_LAYER_DIM, out_features=LATENT_DIM)
         else:
             self.dense1 = nn.Linear(in_features=ENCODER_OUT_DIM, out_features=LATENT_DIM)
         self.dense2 = nn.Linear(in_features=LATENT_DIM, out_features=DATA_PARAMS["num_classes"])

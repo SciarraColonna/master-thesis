@@ -24,13 +24,16 @@ def batch_accuracy (outputs, labels):
 """
 The function calculates the accuracy of the activity clasification for a specific dataloader (train/validation/test).
 """
-def accuracy (model, dataloader):
+def accuracy (model, dataloader, concepts=False):
     acc = 0
     model.eval()
 
     with torch.no_grad():
         for _, data in enumerate(dataloader):
-            inputs, labels = data
+            if concepts:
+                inputs, labels, _ = data
+            else:
+                inputs, labels = data
             outputs = model(inputs)
             acc += batch_accuracy(outputs, labels)
 
@@ -40,12 +43,15 @@ def accuracy (model, dataloader):
 """
 The function plots the confusion matrix related to a specific dataloader (train/validation/split).
 """
-def plot_conf_matrix (model, dataloader, title):
+def plot_conf_matrix (model, dataloader, title, concepts=False):
     conf_matrix = np.zeros((DATA_PARAMS["num_classes"], DATA_PARAMS["num_classes"]))
 
     with torch.no_grad():
         for _, data in enumerate(dataloader):
-            inputs, labels = data
+            if concepts:
+                inputs, labels, _ = data
+            else:
+                inputs, labels = data
             outputs = model(inputs)
 
             for i in range(0, (outputs.size())[0]):
