@@ -13,6 +13,3 @@ __pycache__/
 # Large files
 data/UCI-HAR/*
 !data/UCI-HAR/.gitkeep
-
-model/*
-!model/.gitkeep

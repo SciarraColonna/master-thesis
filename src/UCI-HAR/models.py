@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from datasets import DATA_PARAMS
-from concepts import CONCEPTS_LAYER_DIM
+from concepts import CONCEPTS_LAYER_DIM, CONCEPTS_MAP
 
 
 ENCODER_OUT_DIM = 16
@@ -13,7 +13,6 @@ HYPERPARAMETERS = {
     "learning_rate": 1e-4,
     "validation_split": 0.2,
     "alpha": 1.0
-
 }
 
 
@@ -74,15 +73,14 @@ class ConceptHead (nn.Module):
     def forward (self, x):
         x = self.dense1(x)
 
-        #print(x)
         for i in range(0, (x.size())[0]):
-            for j in range(0, CONCEPTS_LAYER_DIM):
-                if j < 2:
-                    x[i][j] = (x[i][j]).sigmoid()
+            c_idx = 0
+            for j in CONCEPTS_MAP:
+                if j == 1:
+                    x[i][c_idx] = (x[i][c_idx]).sigmoid()
                 else:
-                    x[i, -3:] = torch.softmax(x[i, -3:], dim=0)
-                    break
-        #print(x)
+                    x[i, c_idx:(c_idx + j)] = torch.softmax(x[i, c_idx:(c_idx + j)], dim=0)
+                c_idx += j
 
         return x
 

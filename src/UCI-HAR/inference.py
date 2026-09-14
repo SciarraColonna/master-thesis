@@ -5,12 +5,12 @@ from torch.utils.data import DataLoader
 from models import SignalEncoder, ConceptHead, TaskHead, HYPERPARAMETERS
 from datasets import ConceptHARDataset
 from concepts import concept_criterion
-from metrics import accuracy
+from metrics import accuracy, plot_conf_matrix
 
 
 def concept_inference ():
     test_dataset = ConceptHARDataset("test")
-    test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+    test_dataloader = DataLoader(test_dataset, batch_size=HYPERPARAMETERS["batch_size"], shuffle=False)
 
     encoder = SignalEncoder()
     concept_head = ConceptHead()
@@ -20,7 +20,7 @@ def concept_inference ():
     #concept_criterion = nn.BCELoss()
 
     model = nn.Sequential(encoder, concept_head, task_head)
-    model.load_state_dict(torch.load("model/weights.pt", weights_only=True))
+    model.load_state_dict(torch.load("src/UCI-HAR/weights/weights_CBM.pt", weights_only=True))
 
     model.eval()
 
@@ -39,10 +39,11 @@ def concept_inference ():
 
             avg_loss += loss.item()
 
-        avg_loss = round(avg_loss / len(test_dataloader.dataset), 4)
+        avg_loss = round(avg_loss / len(test_dataloader), 4)
 
         print(avg_loss)
         print(accuracy(model, test_dataloader, concepts=True))
+        plot_conf_matrix(model, test_dataloader, title="Confusion matrix related to the test split", concepts=True)
 
 
 if __name__ == "__main__":

@@ -13,47 +13,75 @@ PATHS = {
 }
 
 NUM_CONCEPTS = 3
-CONCEPTS_LAYER_DIM = 5
+CONCEPTS_LAYER_DIM = 7
+CONCEPTS_MAP = [1, 3, 3]
 WINDOW_TIMESTEPS = 128
-K = 3
+
+BINARY_CRITERION = nn.BCELoss()
+TERNARY_CRITERION = nn.NLLLoss()
 
 
 """
-Function that performs a K-means clustering algorithm on the set of variances associated with the X component of the 
-body acceleration. The clustering is performed only considering the training samples and not the test samples. 
-The function returns the centroids produced by the clustering algorithm.
+Function that performs a 1-dimensional K-means clustering on a list of values with a specified number of clusters and iterations.
 """
-def get_centroids ():
-    tot_acc_x = np.loadtxt("{0}Inertial Signals/body_acc_x_{1}.txt".format(PATHS["train"], "train"))
-    activities = np.loadtxt("{0}y_{1}.txt".format(PATHS["train"], "train"))
-
-    variances = list()
-
-    for idx in range(0, len(activities)):
-        var = np.std((tot_acc_x[idx])).item()
-        variances.append(var)
-
-    # K-means algorithm
-    num_iterations = 50
-
-    # List of CV values to cluster (one for each dynamic activity)
-    variances_tensor = (torch.tensor(variances)).view((len(variances), 1))
+def k_means (values, K, num_iterations):
+    # List of values to cluster
+    values_tensor = (torch.tensor(values)).view((len(values), 1))
     # Initialization of the centroids
-    centroids = torch.tensor(random.sample(variances, K)).view((K, 1))
+    centroids = torch.tensor(random.sample(values, K)).view((K, 1))
 
     for _ in range(0, num_iterations):
         # Euclidean distance between each variance and each centroid
-        distances = torch.cdist(variances_tensor, centroids)
+        distances = torch.cdist(values_tensor, centroids)
         _, cluster_labels = torch.min(distances, dim=1)
 
         # A new centroid is calculated for each cluster
         for idx in range(0, K):
             if torch.sum(cluster_labels == idx) > 0:
-                centroids[idx] = torch.mean(variances_tensor[cluster_labels == idx], dim=0)
+                centroids[idx] = torch.mean(values_tensor[cluster_labels == idx], dim=0)
 
     # The centroids are sorted in order to facilitate the cluster asignment
     centroids, _ = torch.sort(centroids, dim=0)
 
+    return centroids
+
+
+"""
+Function that performs a K-means clustering algorithm on the set of means associated with the Z component of the 
+total acceleration. The clustering is performed only considering the training samples and not the test samples. 
+The function returns the centroids produced by the clustering algorithm.
+"""
+def get_tilting_centroids ():
+    tot_acc_z = np.loadtxt("{0}Inertial Signals/total_acc_z_{1}.txt".format(PATHS["train"], "train"))
+    activities = np.loadtxt("{0}y_{1}.txt".format(PATHS["train"], "train"))
+
+    means = list()
+
+    for idx in range(0, len(activities)):
+        if activities[idx] == 4 or activities[idx] == 5:
+            mean = np.mean(tot_acc_z[idx]).item()
+            means.append(mean)
+
+    centroids = k_means(means, K=2, num_iterations=50)
+    return centroids
+
+
+"""
+Function that performs a K-means clustering algorithm on the set of standard deviations associated with the X component of the 
+total acceleration. The clustering is performed only considering the training samples and not the test samples. 
+The function returns the centroids produced by the clustering algorithm.
+"""
+def get_std_centroids ():
+    tot_acc_x = np.loadtxt("{0}Inertial Signals/total_acc_x_{1}.txt".format(PATHS["train"], "train"))
+    activities = np.loadtxt("{0}y_{1}.txt".format(PATHS["train"], "train"))
+
+    variances = list()
+
+    for idx in range(0, len(activities)):
+        var = np.std(tot_acc_x[idx]).item()
+        variances.append(var)
+
+    centroids = k_means(variances, K=3, num_iterations=50)
     return centroids
 
 
@@ -70,7 +98,7 @@ def clear_concepts (type):
 """
 Function that performs the concept-labeling for each sample of both the training and the test set.
 """
-def concept_labeling (type, centroids):
+def concept_labeling (type, tilting_centroids, std_centroids):
     concepts_file = open("{0}concepts_{1}.txt".format(PATHS[type], type), "a")
 
     activities = np.loadtxt("{0}y_{1}.txt".format(PATHS[type], type))
@@ -97,28 +125,47 @@ def concept_labeling (type, centroids):
             z_sum += tot_acc_z[idx][timestep]
 
         if abs(y_sum) < abs(x_sum) and abs(z_sum) < abs(x_sum):
-            concepts[idx][1] = 1
+            # If the activity is "sitting" or "standing" we have to choose between "vertical-upright" and "vertical-tilted"
+            if activities[idx] == 4 or activities[idx] == 5:
+                mean = np.mean(tot_acc_z[idx])
+                distances = np.empty((2,))
+
+                for i in range(0, 2):
+                    distances[i] = abs(tilting_centroids[i] - mean)
+
+                vertical_posture = np.argmin(distances)
+
+                if vertical_posture == 0:
+                    # Vertical-upright
+                    concepts[idx, 1:4] = [0, 1, 0]
+                else:
+                    # Vertical-tilted
+                    concepts[idx, 1:4] = [0, 0, 1]
+            # Any other activity that is not "laying" is "vertical-upright" by default
+            else:
+                concepts[idx, 1:4] = [0, 1, 0]
         else:
-            concepts[idx][1] = 0
+            # The "laying" activity is "horizontal" by default
+            concepts[idx, 1:4] = [1, 0, 0]
 
         # Labeling the "energy level" of the X component of the body acceleration, categorizing it with respect to
         # three possible values (0, 1 and 2 for low, medium and high)
         if activities[idx] > 3:
             energy_level = 0
         else:
-            variance = np.std(tot_acc_x[idx])
+            std = np.std(tot_acc_x[idx])
+            distances = np.empty((3,))
 
-            distances = np.empty((K,))
-            for i in range(0, K):
-                distances[i] = abs(centroids[i] - variance)
+            for i in range(0, 3):
+                distances[i] = abs(std_centroids[i] - std)
 
             energy_level = np.argmin(distances)
 
         for level in range(0, 3):
             if level == int(energy_level):
-                concepts[idx][level + 2] = 1
+                concepts[idx][level + 4] = 1
             else:
-                concepts[idx][level + 2] = 0
+                concepts[idx][level + 4] = 0
 
 
     # The calculated concepts are written on the related txt file
@@ -132,24 +179,29 @@ def concept_labeling (type, centroids):
 
 def concept_criterion (out_concept, concept):
     loss = 0
-    binary_criterion = nn.BCELoss()
-    ternary_criterion = nn.NLLLoss()
+    batch_size = (out_concept.size())[0]
 
-    for i in range(0, (out_concept.size())[0]):
-        for j in range(0, CONCEPTS_LAYER_DIM):
-            if j < 2:
-                loss += (binary_criterion(out_concept[i][j], concept[i][j])) / math.log(2)
+    for i in range(0, batch_size):
+        c_idx = 0
+        for j in CONCEPTS_MAP:
+            if j == 1:
+                loss += (BINARY_CRITERION(out_concept[i][c_idx], concept[i][c_idx])) / math.log(2)
             else:
-                loss += (ternary_criterion(torch.log(out_concept[i, -3:]), torch.argmax(concept[i, -3:])) / math.log(3)) 
+                loss += (TERNARY_CRITERION(torch.log(out_concept[i, c_idx:(c_idx + j)]), torch.argmax(concept[i, c_idx:(c_idx + j)])) / math.log(3)) 
+            c_idx += j
 
-    return (loss / NUM_CONCEPTS)
+    return (loss / (NUM_CONCEPTS * batch_size))
 
     
 if __name__ == "__main__":
-    centroids = get_centroids()
+    std_centroids = get_std_centroids()
+    tilting_centroids = get_tilting_centroids()
 
     clear_concepts("train")
     clear_concepts("test")
 
-    concept_labeling("train", centroids)
-    concept_labeling("test", centroids)
+    concept_labeling("train", tilting_centroids, std_centroids)
+    concept_labeling("test", tilting_centroids, std_centroids)
+
+    print(std_centroids)
+    print(tilting_centroids)

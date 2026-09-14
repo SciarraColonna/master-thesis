@@ -40,11 +40,16 @@ def baseline_train ():
     y_val_acc = []
 
     best_val_loss = float("inf")
+    prev_val_loss = float("inf")
     best_epoch = 0
     final_val_acc = 0
     best_model = None
+    epochs = 0
+    current_patience = 0
 
-    for epoch in tqdm(range(0, NUM_EPOCHS), desc="Training on " + str(NUM_EPOCHS) + " epochs"):
+    while (True):
+        epochs += 1
+        print("Epoch", epochs, end="\r")
         # The model is set in training mode
         model.train()
     
@@ -95,11 +100,19 @@ def baseline_train ():
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             final_val_acc = val_acc
-            best_epoch = epoch + 1
+            best_epoch = epochs
             best_model = model.state_dict()
 
+        if val_loss > prev_val_loss:
+            current_patience += 1
+            if current_patience == PATIENCE:
+                break
+        else:
+            current_patience = 0
+            prev_val_loss = val_loss
 
-    x = np.linspace(1, NUM_EPOCHS, NUM_EPOCHS)
+
+    x = np.linspace(1, epochs, epochs)
     # Plotting the loss variation of the training and validation splits
     plt.plot(x, y_train_loss, label="Train loss")
     plt.plot(x, y_val_loss, label="Validation loss")
@@ -145,7 +158,6 @@ def concept_train ():
     model = nn.Sequential(encoder, conceptHead, taskHead)
 
     task_criterion = nn.CrossEntropyLoss()
-    #concept_criterion = nn.BCELoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=HYPERPARAMETERS["learning_rate"])
 
 
@@ -287,16 +299,17 @@ def concept_train ():
     return best_model
 
 
-
-
-
-def save_model(best_model):
+def save_model(best_model, concepts=False):
     if best_model is not None:
-        torch.save(best_model, "model/weights.pt")
+        if concepts:
+            torch.save(best_model, "src/UCI-HAR/weights/weights_CBM.pt")
+        else:
+            torch.save(best_model, "src/UCI-HAR/weights/weights_baseline.pt")
     else:
         print("No best model!")
 
 
+
 if __name__ == "__main__":
-    best_model = concept_train()
+    best_model = baseline_train()
     save_model(best_model)
