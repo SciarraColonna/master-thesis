@@ -41,6 +41,21 @@ def accuracy (model, dataloader, concepts=False):
 
 
 """
+The function calculates the accuracy of the activity classification for a single batch. The returned value is the sum of the
+accuracies of all the samples of the batch.
+"""
+def concept_batch_accuracy (outputs, concepts):
+    part_acc = 0
+
+    for i in range(0, (outputs.size())[0]):
+        for j in range(0, (outputs.size())[1]):
+            if round((outputs[i][j]).item()) == int((concepts[i][j]).item()):
+                part_acc += 1
+
+    return part_acc
+
+
+"""
 The function plots the confusion matrix related to a specific dataloader (train/validation/split).
 """
 def plot_conf_matrix (model, dataloader, title, concepts=False):

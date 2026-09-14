@@ -12,7 +12,7 @@ HYPERPARAMETERS = {
     "batch_size": 64,
     "learning_rate": 1e-4,
     "validation_split": 0.2,
-    "alpha": 0.5
+    "alpha": 1.0
 
 }
 
@@ -70,10 +70,19 @@ class ConceptHead (nn.Module):
         super().__init__()
 
         self.dense1 = nn.Linear(in_features=ENCODER_OUT_DIM, out_features=CONCEPTS_LAYER_DIM)
-        self.activation = nn.ReLU()
 
     def forward (self, x):
         x = self.dense1(x)
+
+        #print(x)
+        for i in range(0, (x.size())[0]):
+            for j in range(0, CONCEPTS_LAYER_DIM):
+                if j < 2:
+                    x[i][j] = (x[i][j]).sigmoid()
+                else:
+                    x[i, -3:] = torch.softmax(x[i, -3:], dim=0)
+                    break
+        #print(x)
 
         return x
 
@@ -99,9 +108,7 @@ class TaskHead (nn.Module):
             self.dense1 = nn.Linear(in_features=ENCODER_OUT_DIM, out_features=LATENT_DIM)
         self.dense2 = nn.Linear(in_features=LATENT_DIM, out_features=DATA_PARAMS["num_classes"])
 
-        #self.dropout = nn.Dropout(0.5)
         self.activation = nn.ReLU()
-
 
     def forward (self, x):
         x = self.activation(self.dense1(x))

@@ -1,7 +1,10 @@
 import torch
+import torch.nn as nn
 import numpy as np
 from matplotlib import pyplot as plt
+
 import random
+import math
 
 
 PATHS = {
@@ -125,6 +128,21 @@ def concept_labeling (type, centroids):
         concepts_file.write("\n")
 
     concepts_file.close()
+
+
+def concept_criterion (out_concept, concept):
+    loss = 0
+    binary_criterion = nn.BCELoss()
+    ternary_criterion = nn.NLLLoss()
+
+    for i in range(0, (out_concept.size())[0]):
+        for j in range(0, CONCEPTS_LAYER_DIM):
+            if j < 2:
+                loss += (binary_criterion(out_concept[i][j], concept[i][j])) / math.log(2)
+            else:
+                loss += (ternary_criterion(torch.log(out_concept[i, -3:]), torch.argmax(concept[i, -3:])) / math.log(3)) 
+
+    return (loss / NUM_CONCEPTS)
 
     
 if __name__ == "__main__":

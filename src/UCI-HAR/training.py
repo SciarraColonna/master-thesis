@@ -7,11 +7,12 @@ from tqdm import tqdm
 
 from datasets import HARDataset, ConceptHARDataset, split_for_validation
 from models import HYPERPARAMETERS, SignalEncoder, TaskHead, ConceptHead
-from metrics import accuracy, plot_conf_matrix
+from metrics import accuracy, plot_conf_matrix, concept_batch_accuracy
+from concepts import CONCEPTS_LAYER_DIM, concept_criterion
 
 
 NUM_EPOCHS = 100
-PATIENCE = 4
+PATIENCE = 10
 
 
 def baseline_train ():
@@ -26,7 +27,7 @@ def baseline_train ():
     model = nn.Sequential(encoder, taskHead)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=HYPERPARAMETERS["learning_rate"])
+    optimizer = torch.optim.AdamW(model.parameters(), lr=HYPERPARAMETERS["learning_rate"])
 
 
     print("Starting point")
@@ -144,8 +145,8 @@ def concept_train ():
     model = nn.Sequential(encoder, conceptHead, taskHead)
 
     task_criterion = nn.CrossEntropyLoss()
-    concept_criterion = nn.BCELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=HYPERPARAMETERS["learning_rate"])
+    #concept_criterion = nn.BCELoss()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=HYPERPARAMETERS["learning_rate"])
 
 
     print("Starting point")
@@ -157,17 +158,27 @@ def concept_train ():
     y_train_acc = []
     y_val_acc = []
 
+    y_conc_train_acc = []
+    y_conc_val_acc = []
+
     best_val_loss = float("inf")
+    prev_val_loss = float("inf")
+    epochs = 0
+    current_patience = 0
     best_epoch = 0
     final_val_acc = 0
     best_model = None
 
-    for epoch in tqdm(range(0, NUM_EPOCHS), desc="Training on " + str(NUM_EPOCHS) + " epochs"):
-
+    #for epoch in tqdm(range(0, NUM_EPOCHS), desc="Training on " + str(NUM_EPOCHS) + " epochs"):
+    while (True):
+        epochs += 1
+        print("Epoch", epochs, end="\r")
         # The model is set in training mode
         model.train()
     
         train_loss = 0
+        conc_train_acc = 0
+        conc_val_acc = 0
         # Iterating through the batches
         for _, data in enumerate(train_dataloader):
             inputs, labels, concepts = data
@@ -175,9 +186,9 @@ def concept_train ():
             optimizer.zero_grad()
     
             encoded_input = encoder(inputs)
-            out_concepts = conceptHead(encoded_input).sigmoid()
+            out_concepts = conceptHead(encoded_input)
             out_labels = taskHead(out_concepts)
-            
+
             concept_loss = concept_criterion(out_concepts, concepts)
             task_loss = task_criterion(out_labels, labels)
             loss = task_loss + HYPERPARAMETERS["alpha"] * concept_loss
@@ -187,6 +198,8 @@ def concept_train ():
             loss.backward()
             # Parameters update
             optimizer.step()
+
+            conc_train_acc += concept_batch_accuracy(out_concepts, concepts)
     
         # The model is set in evaluation mode
         model.eval()
@@ -197,13 +210,16 @@ def concept_train ():
                 inputs, labels, concepts = data
 
                 encoded_input = encoder(inputs)
-                out_concepts = conceptHead(encoded_input).sigmoid()
+                out_concepts = conceptHead(encoded_input)
                 out_labels = taskHead(out_concepts)
     
                 concept_loss = concept_criterion(out_concepts, concepts)
                 task_loss = task_criterion(out_labels, labels)
                 loss = task_loss + HYPERPARAMETERS["alpha"] * concept_loss
                 val_loss += loss.item()
+
+                conc_val_acc += concept_batch_accuracy(out_concepts, concepts)
+
     
         # Epoch loss calculation
         train_loss = round(train_loss / len(train_dataloader), 4)
@@ -216,16 +232,29 @@ def concept_train ():
         val_acc = accuracy(model, validation_dataloader, concepts=True)
         y_train_acc.append(train_acc)
         y_val_acc.append(val_acc)
+
+        conc_train_acc = round((conc_train_acc / (len(train_dataloader.dataset) * CONCEPTS_LAYER_DIM) * 100), 2)
+        y_conc_train_acc.append(conc_train_acc)
+        conc_val_acc = round((conc_val_acc / (len(validation_dataloader.dataset) * CONCEPTS_LAYER_DIM) * 100), 2)
+        y_conc_val_acc.append(conc_val_acc)
     
         # Best model update
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             final_val_acc = val_acc
-            best_epoch = epoch + 1
+            best_epoch = epochs
             best_model = model.state_dict()
 
+        if val_loss > prev_val_loss:
+            current_patience += 1
+            if current_patience == PATIENCE:
+                break
+        else:
+            current_patience = 0
+            prev_val_loss = val_loss
 
-    x = np.linspace(1, NUM_EPOCHS, NUM_EPOCHS)
+
+    x = np.linspace(1, epochs, epochs)
     # Plotting the loss variation of the training and validation splits
     plt.plot(x, y_train_loss, label="Train loss")
     plt.plot(x, y_val_loss, label="Validation loss")
@@ -239,6 +268,8 @@ def concept_train ():
     # Plotting the accuracy variation of the training and validation splits
     plt.plot(x, y_train_acc, label="Train accuracy")
     plt.plot(x, y_val_acc, label="Validation accuracy")
+    plt.plot(x, y_conc_train_acc, label="Concept train accuracy")
+    plt.plot(x, y_conc_val_acc, label="Concept validation accuracy")
     plt.xlabel("Epoch")
     plt.ylabel("Accuracy")
     plt.title("Accuracy variation for train/validation splits")
@@ -268,4 +299,4 @@ def save_model(best_model):
 
 if __name__ == "__main__":
     best_model = concept_train()
-    #save_model(best_model)
+    save_model(best_model)
