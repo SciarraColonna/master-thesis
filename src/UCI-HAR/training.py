@@ -311,4 +311,4 @@ def save_model(best_model, concepts=False):
 
 if __name__ == "__main__":
     best_model = concept_train()
-    save_model(best_model, concepts=True)
+    #save_model(best_model, concepts=True)

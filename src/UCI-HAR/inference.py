@@ -108,4 +108,4 @@ def single_concept_inference ():
 
 
 if __name__ == "__main__":
-    baseline_inference()
+    concept_inference()
