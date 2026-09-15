@@ -10,7 +10,7 @@ LATENT_DIM = 8
 
 HYPERPARAMETERS = {
     "batch_size": 64,
-    "learning_rate": 1e-4,
+    "learning_rate": 5e-4,
     "validation_split": 0.2,
     "alpha": 1.0
 }

@@ -133,6 +133,6 @@ class ConceptHARDataset (Dataset):
         # sample: [9, 128] -> the channel dimension is the first being the depth of the input data
         sample = np.transpose(sample)
         label = torch.tensor(self.labels[idx] - 1, dtype=torch.long)
-        item_concepts = torch.from_numpy(self.concepts[idx])
+        sample_concepts = torch.from_numpy(self.concepts[idx])
 
-        return sample, label, item_concepts
+        return sample, label, sample_concepts

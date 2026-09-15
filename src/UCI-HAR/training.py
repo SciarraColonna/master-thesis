@@ -3,7 +3,6 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 import numpy as np
 import matplotlib.pyplot as plt 
-from tqdm import tqdm
 
 from datasets import HARDataset, ConceptHARDataset, split_for_validation
 from models import HYPERPARAMETERS, SignalEncoder, TaskHead, ConceptHead
@@ -49,7 +48,7 @@ def baseline_train ():
 
     while (True):
         epochs += 1
-        print("Epoch", epochs, end="\r")
+        print("Current epoch:", epochs, end="\r")
         # The model is set in training mode
         model.train()
     
@@ -133,7 +132,7 @@ def baseline_train ():
     plt.axvline(x=best_epoch, linestyle="dashed")
     plt.show()
 
-    print("Best validation loss:", best_val_loss)
+    print("\nBest validation loss:", best_val_loss)
     print("Final validation accuracy: ", str(final_val_acc) + "%")
 
     # Plotting the confusion matrices for train/validation splits
@@ -184,7 +183,7 @@ def concept_train ():
     #for epoch in tqdm(range(0, NUM_EPOCHS), desc="Training on " + str(NUM_EPOCHS) + " epochs"):
     while (True):
         epochs += 1
-        print("Epoch", epochs, end="\r")
+        print("Current epoch:", epochs, end="\r")
         # The model is set in training mode
         model.train()
     
@@ -289,7 +288,7 @@ def concept_train ():
     plt.axvline(x=best_epoch, linestyle="dashed")
     plt.show()
 
-    print("Best validation loss:", best_val_loss)
+    print("\nBest validation loss:", best_val_loss)
     print("Final validation accuracy: ", str(final_val_acc) + "%")
 
     # Plotting the confusion matrices for train/validation splits
@@ -311,5 +310,5 @@ def save_model(best_model, concepts=False):
 
 
 if __name__ == "__main__":
-    best_model = baseline_train()
-    save_model(best_model)
+    best_model = concept_train()
+    save_model(best_model, concepts=True)
