@@ -291,10 +291,10 @@ def concept_train ():
     plt.show()
 
     # Plotting the accuracy variation of the training and validation splits both w.r.t. the activities and the concepts
-    plt.plot(x, y_train_acc, label="Train accuracy")
-    plt.plot(x, y_val_acc, label="Validation accuracy")
-    plt.plot(x, y_conc_train_acc, label="Concept train accuracy")
-    plt.plot(x, y_conc_val_acc, label="Concept validation accuracy")
+    plt.plot(x, y_train_acc, label="Train accuracy", color="blue")
+    plt.plot(x, y_val_acc, label="Validation accuracy", color="orange")
+    plt.plot(x, y_conc_train_acc, label="Concept train accuracy", color="blue", linestyle="dashed")
+    plt.plot(x, y_conc_val_acc, label="Concept validation accuracy", color="orange", linestyle="dashed")
     plt.xlabel("Epoch")
     plt.ylabel("Accuracy")
     plt.title("Accuracy variation for train/validation splits")
@@ -327,5 +327,5 @@ def save_model(best_model, concepts=False):
 
 
 if __name__ == "__main__":
-    best_model = concept_train()
+    best_model = baseline_train()
     #save_model(best_model, concepts=True)

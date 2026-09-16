@@ -1,12 +1,14 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+import numpy as np
 from random import randrange
+import matplotlib.pyplot as plt
 
 from models import SignalEncoder, ConceptHead, TaskHead, HYPERPARAMETERS
 from datasets import ConceptHARDataset, HARDataset
 from concepts import concept_criterion
-from metrics import accuracy, plot_conf_matrix
+from metrics import accuracy, batch_accuracy, plot_conf_matrix, plot_accuracy_per_subject
 
 
 ###
@@ -14,7 +16,7 @@ from metrics import accuracy, plot_conf_matrix
 ###
 def baseline_inference ():
     test_dataset = HARDataset("test")
-    test_dataloader = DataLoader(test_dataset, batch_size=HYPERPARAMETERS["batch_size"], shuffle=False)
+    test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
     # Model components
     encoder = SignalEncoder()
@@ -28,9 +30,12 @@ def baseline_inference ():
 
     model.eval()
 
+    # Dictionary containing information about the model performance for each subject
+    subjects_stats = dict()
     avg_loss = 0
     with torch.no_grad():
-        for _, data in enumerate(test_dataloader):
+        # Iterating through the test batches (batch size = 1)
+        for idx, data in enumerate(test_dataloader):
             inputs, labels = data
 
             encoded_signals = encoder(inputs)
@@ -39,11 +44,21 @@ def baseline_inference ():
             task_loss = task_criterion(out_labels, labels)
             avg_loss += task_loss.item()
 
+            # The performance-per-subject dictionary is updated
+            subj_idx = int(test_dataset.subjects[idx])
+            if subj_idx not in subjects_stats:
+                subjects_stats[subj_idx] = [0, 0]
+            
+            subjects_stats[subj_idx][0] += batch_accuracy(out_labels, labels)
+            subjects_stats[subj_idx][1] += 1
+
+
         avg_loss = round(avg_loss / len(test_dataloader), 4)
         
         print("Average test loss:", avg_loss)
         print("Task accuracy:", accuracy(model, test_dataloader, concepts=False))
         plot_conf_matrix(model, test_dataloader, title="Confusion matrix related to the test split", concepts=False)
+        plot_accuracy_per_subject(subjects_stats)
 
 
 ###
@@ -51,7 +66,7 @@ def baseline_inference ():
 ###
 def concept_inference ():
     test_dataset = ConceptHARDataset("test")
-    test_dataloader = DataLoader(test_dataset, batch_size=HYPERPARAMETERS["batch_size"], shuffle=False)
+    test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
     # Model components
     encoder = SignalEncoder()
@@ -66,9 +81,12 @@ def concept_inference ():
 
     model.eval()
 
+    # Dictionary containing information about the model performance for each subject
+    subjects_stats = dict()
     avg_loss = 0
     with torch.no_grad():
-        for _, data in enumerate(test_dataloader):
+        # Iterating through the test batches (batch size = 1)
+        for idx, data in enumerate(test_dataloader):
             inputs, labels, concepts = data
 
             encoded_signals = encoder(inputs)
@@ -81,24 +99,57 @@ def concept_inference ():
 
             avg_loss += loss.item()
 
+            # The performance-per-subject dictionary is updated
+            subj_idx = int(test_dataset.subjects[idx])
+            if subj_idx not in subjects_stats:
+                subjects_stats[subj_idx] = [0, 0]
+            
+            subjects_stats[subj_idx][0] += batch_accuracy(out_labels, labels)
+            subjects_stats[subj_idx][1] += 1
+
+
         avg_loss = round(avg_loss / len(test_dataloader), 4)
 
         print("Average test loss:", avg_loss)
         print("Task accuracy:", accuracy(model, test_dataloader, concepts=True))
         plot_conf_matrix(model, test_dataloader, title="Confusion matrix related to the test split", concepts=True)
+        plot_accuracy_per_subject(subjects_stats)
+
+
+###
+# The function plots the body acceleration, angular velocity and total acceleration (on the X, Y and Z axes) of a specific sample
+# of the test set.
+###
+def plot_test_sample (sample):
+    x = np.linspace(0, 2.56, 128)
+
+    for i in range(0, 9, 3):
+        if i == 0: plt.title("Body acceleration (g)")
+        if i == 3: plt.title("Angular velocity (rad/s)")
+        if i == 6: plt.title("Total body acceleration (g)")
+
+        plt.plot(x, sample[i], label="X axis")
+        plt.plot(x, sample[i + 1], label="Y axis")
+        plt.plot(x, sample[i + 2], label="Z axis")
+        plt.legend()
+        plt.ylim((-3, 3))
+        plt.show()
 
 
 ###
 # The function performs the inference of the concept bottleneck model on a single (random) sample of the test set. The inference
-# compares both the predicted concept with the actual concept and the predicted activity with the actual activity
+# compares both the predicted concept with the actual concept and the predicted activity with the actual activity.
 ###
 def single_concept_inference ():
     test_dataset = ConceptHARDataset("test")
     # We choose a random sample from the test set
     rand_idx = randrange(len(test_dataset))
     rand_sample, label, concepts = test_dataset.__getitem__(rand_idx)
+
+    plot_test_sample(rand_sample)
     rand_sample = (torch.from_numpy(rand_sample))[None,:]
 
+    # Model components
     encoder = SignalEncoder()
     concept_head = ConceptHead()
     task_head = TaskHead(concepts=True)

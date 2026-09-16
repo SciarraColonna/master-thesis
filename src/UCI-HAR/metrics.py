@@ -120,3 +120,26 @@ def plot_conf_matrix (model, dataloader, title, concepts=False):
 
     fig.tight_layout()
     plt.show()
+
+
+###
+# The function plots the activity classification accuracy separated by subject, given a specific dictionary of statistics that
+# associates each subject to the pair (number of correct predictions for that subject, number of instances of the subject)
+###
+def plot_accuracy_per_subject (subjects_stats):
+    acc_per_subj = np.zeros((len(subjects_stats.keys()),))
+    idx = 0
+    for subj_idx in subjects_stats:
+        # Accuracy = (number of correct predictions for that subject) / (number of instances of the subject)
+        acc_per_subj[idx] = round(subjects_stats[subj_idx][0] / subjects_stats[subj_idx][1], 2)
+        idx += 1
+
+    x = list(map(str, list(subjects_stats.keys())))
+    plt.figure(figsize=(10, 5))
+    bars = plt.bar(x, acc_per_subj)
+    plt.bar_label(bars)
+
+    plt.title("Task accuracy per subject", fontsize=20, pad=10)
+    plt.xlabel("Subject", fontsize=15)
+    plt.ylabel("Accuracy", fontsize=15)
+    plt.show()
