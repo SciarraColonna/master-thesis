@@ -14,6 +14,7 @@ PATHS = {
 
 NUM_CONCEPTS = 3
 CONCEPTS_LAYER_DIM = 7
+# The concepts map indicates the number of layer units associated to each concept
 CONCEPTS_MAP = [1, 3, 3]
 WINDOW_TIMESTEPS = 128
 
@@ -21,9 +22,9 @@ BINARY_CRITERION = nn.BCELoss()
 TERNARY_CRITERION = nn.NLLLoss()
 
 
-"""
-Function that performs a 1-dimensional K-means clustering on a list of values with a specified number of clusters and iterations.
-"""
+###
+# The function performs a 1-dimensional K-means clustering on a list of values with a specified number of clusters and iterations.
+### 
 def k_means (values, K, num_iterations):
     # List of values to cluster
     values_tensor = (torch.tensor(values)).view((len(values), 1))
@@ -46,11 +47,11 @@ def k_means (values, K, num_iterations):
     return centroids
 
 
-"""
-Function that performs a K-means clustering algorithm on the set of means associated with the Z component of the 
-total acceleration. The clustering is performed only considering the training samples and not the test samples. 
-The function returns the centroids produced by the clustering algorithm.
-"""
+###
+# The function performs a K-means clustering algorithm on the set of means associated with the Z component of the 
+# total acceleration. The clustering is performed only considering the training samples and not the test samples. 
+# The function returns the centroids produced by the clustering algorithm.
+###
 def get_tilting_centroids ():
     tot_acc_z = np.loadtxt("{0}Inertial Signals/total_acc_z_{1}.txt".format(PATHS["train"], "train"))
     activities = np.loadtxt("{0}y_{1}.txt".format(PATHS["train"], "train"))
@@ -66,11 +67,11 @@ def get_tilting_centroids ():
     return centroids
 
 
-"""
-Function that performs a K-means clustering algorithm on the set of standard deviations associated with the X component of the 
-total acceleration. The clustering is performed only considering the training samples and not the test samples. 
-The function returns the centroids produced by the clustering algorithm.
-"""
+###
+# The function performs a K-means clustering algorithm on the set of standard deviations associated with the X component of the 
+# total acceleration. The clustering is performed only considering the training samples and not the test samples. 
+# The function returns the centroids produced by the clustering algorithm.
+###
 def get_std_centroids ():
     tot_acc_x = np.loadtxt("{0}Inertial Signals/total_acc_x_{1}.txt".format(PATHS["train"], "train"))
     activities = np.loadtxt("{0}y_{1}.txt".format(PATHS["train"], "train"))
@@ -85,9 +86,9 @@ def get_std_centroids ():
     return centroids
 
 
-"""
-Function that clears the previous content of the concept files (if any)
-"""
+###
+# The function clears the previous content of the concept files (if any)
+###
 def clear_concepts (type):
     # Clearing the previous content of the concept files (if any)
     concepts_file = open("{0}concepts_{1}.txt".format(PATHS[type], type), "w")
@@ -95,9 +96,9 @@ def clear_concepts (type):
     concepts_file.close()
 
 
-"""
-Function that performs the concept-labeling for each sample of both the training and the test set.
-"""
+###
+# The function performs the concept-labeling for each sample of both the training and the test set.
+###
 def concept_labeling (type, tilting_centroids, std_centroids):
     concepts_file = open("{0}concepts_{1}.txt".format(PATHS[type], type), "a")
 
@@ -115,7 +116,7 @@ def concept_labeling (type, tilting_centroids, std_centroids):
         else:
             concepts[idx][0] = 0
 
-        # Labeling horizontal posture (0, lying) or vertical posture (1, all the others) 
+        # Labeling the approximated posture (horizontal, vertical-upright, vertical-tilted)
         x_sum = 0
         y_sum = 0
         z_sum = 0
@@ -126,6 +127,7 @@ def concept_labeling (type, tilting_centroids, std_centroids):
 
         if abs(y_sum) < abs(x_sum) and abs(z_sum) < abs(x_sum):
             # If the activity is "sitting" or "standing" we have to choose between "vertical-upright" and "vertical-tilted"
+            # using the related centroids
             if activities[idx] == 4 or activities[idx] == 5:
                 mean = np.mean(tot_acc_z[idx])
                 distances = np.empty((2,))
@@ -141,15 +143,15 @@ def concept_labeling (type, tilting_centroids, std_centroids):
                 else:
                     # Vertical-tilted
                     concepts[idx, 1:4] = [0, 0, 1]
-            # Any other activity that is not "laying" is "vertical-upright" by default
+            # Any other activity that is not "laying" (i.e. a dynamic activity) is "vertical-upright" by default
             else:
                 concepts[idx, 1:4] = [0, 1, 0]
         else:
             # The "laying" activity is "horizontal" by default
             concepts[idx, 1:4] = [1, 0, 0]
 
-        # Labeling the "energy level" of the X component of the body acceleration, categorizing it with respect to
-        # three possible values (0, 1 and 2 for low, medium and high)
+        # Labeling the "energy level" of the X component of the total acceleration, categorizing it with respect to
+        # three possible values (0, 1 and 2 for low, medium and high energy)
         if activities[idx] > 3:
             energy_level = 0
         else:
@@ -177,20 +179,30 @@ def concept_labeling (type, tilting_centroids, std_centroids):
     concepts_file.close()
 
 
+###
+# The function calculates the loss value related to the concept predictions with respect to the actual concept values of a single batch.
+# The loss is calculated exploiting the binary cross-entropy for the units associated to binary concepts and the multiclass
+# cross-entropy for the units associated to ternary concepts.
+###
 def concept_criterion (out_concept, concept):
     loss = 0
     batch_size = (out_concept.size())[0]
 
+    # Accumulation of the loss values of all the single concepts of all the samples across the batch
     for i in range(0, batch_size):
         c_idx = 0
         for j in CONCEPTS_MAP:
             if j == 1:
+                # The binary cross-entropy value is normalized by log(2)
                 loss += (BINARY_CRITERION(out_concept[i][c_idx], concept[i][c_idx])) / math.log(2)
             else:
+                # The multiclass cross-entropy value is normalized by log(3)
                 loss += (TERNARY_CRITERION(torch.log(out_concept[i, c_idx:(c_idx + j)]), torch.argmax(concept[i, c_idx:(c_idx + j)])) / math.log(3)) 
             c_idx += j
 
+    # Calculation of the mean loss with respect to both the number of concepts and the batch size
     return (loss / (NUM_CONCEPTS * batch_size))
+
 
     
 if __name__ == "__main__":

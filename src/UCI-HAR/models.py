@@ -8,6 +8,7 @@ from concepts import CONCEPTS_LAYER_DIM, CONCEPTS_MAP
 ENCODER_OUT_DIM = 16
 LATENT_DIM = 8
 
+# Common training hyperparameters
 HYPERPARAMETERS = {
     "batch_size": 64,
     "learning_rate": 5e-4,
@@ -16,24 +17,24 @@ HYPERPARAMETERS = {
 }
 
 
-"""
-Convolutional architecture for encoding the input signals.
+###
+# Convolutional architecture for encoding the input signals.
 
-Model structure summary.
-Input:              [N, 9, 128]
-Conv1:              [N, 9, 128] -> [N, 32, 124]
-Activation:         no change
-Pooling1:           [N, 32, 124] -> [N, 32, 62]
-BatchNorm1:         no change
-Conv2:              [N, 32, 62] -> [N, 16, 60]
-Activation:         no change
-Pooling2:           [N, 16, 60] -> [N, 16, 30]
-BatchNorm2:         no change
-GlobAvgPooling:     [N, 16, 30] -> [N, 16, 1]
-Flatten:            [N, 16, 1] -> [N, 16]
+# Model structure summary.
+# Input:              [N, 9, 128]
+# Conv1:              [N, 9, 128] -> [N, 32, 124]
+# Activation:         no change
+# Pooling1:           [N, 32, 124] -> [N, 32, 62]
+# BatchNorm1:         no change
+# Conv2:              [N, 32, 62] -> [N, 16, 60]
+# Activation:         no change
+# Pooling2:           [N, 16, 60] -> [N, 16, 30]
+# BatchNorm2:         no change
+# GlobAvgPooling:     [N, 16, 30] -> [N, 16, 1]
+# Flatten:            [N, 16, 1] -> [N, 16]
 
-(N = batch size)
-"""
+# (N = batch size)
+###
 class SignalEncoder (nn.Module):
     def __init__ (self):
         super().__init__()
@@ -55,15 +56,16 @@ class SignalEncoder (nn.Module):
         return x
 
 
-"""
-Fully-connected architecture encoding the values of the concepts.
+###
+# Fully-connected architecture encoding the values of the concepts.
 
-Model structure summary.
-Input:              [N, 16]
-Dense1:             [N, 16] -> [N, 4]
+# Model structure summary.
+# Input:              [N, 16]
+# Dense1:             [N, 16] -> [N, 4]
+# Activation:         no change
 
-(N = batch size)
-"""
+# (N = batch size)
+###
 class ConceptHead (nn.Module):
     def __init__ (self):
         super().__init__()
@@ -73,6 +75,8 @@ class ConceptHead (nn.Module):
     def forward (self, x):
         x = self.dense1(x)
 
+        # The final activation function mixes the sigmoid (for the units that are associated to a binary concept) and the 
+        # softmax (for the units that are associated to a ternary concept).
         for i in range(0, (x.size())[0]):
             c_idx = 0
             for j in CONCEPTS_MAP:
@@ -85,17 +89,17 @@ class ConceptHead (nn.Module):
         return x
 
 
-"""
-Fully-connected architecture performing the final classification task on the activities.
+###
+# Fully-connected architecture performing the final classification task on the activities.
 
-Model structure summary.
-Input:              [N, M]
-Dense1:             [N, M] -> [N, 8]
-Activation:         no change
-Dense2:             [N, 8] -> [N, 6]
+# Model structure summary.
+# Input:              [N, M]
+# Dense1:             [N, M] -> [N, 8]
+# Activation:         no change
+# Dense2:             [N, 8] -> [N, 6]
 
-(N = batch size, M = 16 if concepts=False, M = 4 if concepts=True)
-"""
+# (N = batch size, M = ENCODER_OUT_DIM if concepts=False, M = CONCEPTS_LAYER_DIM if concepts=True)
+###
 class TaskHead (nn.Module):
     def __init__ (self, concepts=False):
         super().__init__()

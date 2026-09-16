@@ -5,10 +5,10 @@ import seaborn as sns
 from datasets import DATA_PARAMS
 
 
-"""
-The function calculates the accuracy of the activity classification for a single batch. The returned value is the sum of the
-accuracies of all the samples of the batch.
-"""
+###
+# The function calculates the accuracy of the activity classification for a single batch. The returned value is the sum of the
+# accuracies of all the samples of the batch.
+###
 def batch_accuracy (outputs, labels):
     part_acc = 0
 
@@ -21,9 +21,9 @@ def batch_accuracy (outputs, labels):
     return part_acc
 
 
-"""
-The function calculates the accuracy of the activity clasification for a specific dataloader (train/validation/test).
-"""
+###
+# The function calculates the accuracy of the activity clasification for a specific dataloader (train/validation/test).
+###
 def accuracy (model, dataloader, concepts=False):
     acc = 0
     model.eval()
@@ -35,15 +35,17 @@ def accuracy (model, dataloader, concepts=False):
             else:
                 inputs, labels = data
             outputs = model(inputs)
+            # The batch accuracies are accumulated
             acc += batch_accuracy(outputs, labels)
 
+    # The final accuracy is normalized by the number of batches
     return round((acc / len(dataloader.dataset) * 100), 2)
 
 
-"""
-The function calculates the accuracy of the activity classification for a single batch. The returned value is the sum of the
-accuracies of all the samples of the batch.
-"""
+###
+# The function calculates the accuracy of the concept prediction for a single batch. The returned value is the sum of the
+# correct predictions of all the concepts of all the samples of the batch.
+###
 def concept_batch_accuracy (outputs, concepts):
     part_acc = 0
 
@@ -55,13 +57,14 @@ def concept_batch_accuracy (outputs, concepts):
     return part_acc
 
 
-"""
-The function plots the confusion matrix related to a specific dataloader (train/validation/split).
-"""
+###
+# The function plots the confusion matrix and the F1-score table related to a specific dataloader
+###
 def plot_conf_matrix (model, dataloader, title, concepts=False):
     conf_matrix = np.zeros((DATA_PARAMS["num_classes"], DATA_PARAMS["num_classes"]))
 
     with torch.no_grad():
+        # The data is forwarded into the model in order to fill out the confusion matrix
         for _, data in enumerate(dataloader):
             if concepts:
                 inputs, labels, _ = data
@@ -77,6 +80,7 @@ def plot_conf_matrix (model, dataloader, title, concepts=False):
 
     labels = ["WALKING", "WALKING UPSTAIRS", "WALKING DOWNSTAIRS", "SITTING", "STANDING", "LAYING"]
 
+    # Plotting the confusion matrix
     _, ax = plt.subplots()
     ax.xaxis.set_label_position("top")
     ax.yaxis.set_label_position("right")
@@ -84,4 +88,35 @@ def plot_conf_matrix (model, dataloader, title, concepts=False):
     plt.title(title, fontsize=20, pad=10)
     plt.xlabel("Predicted class", fontsize=14)
     plt.ylabel("Actual class", fontsize=14)
+    plt.show()
+
+
+    precisions = np.zeros((DATA_PARAMS["num_classes"],))
+    recalls = np.zeros(precisions.shape)
+    f1_scores = np.zeros(precisions.shape)
+
+    # The precision, recall and F1-score is calculated separately for each activity exploiting the confusion matrix
+    for idx in range(0, DATA_PARAMS["num_classes"]):
+        # Precision(c) = TP(c) / (TP(c) + FP(c))
+        precisions[idx] = conf_matrix[idx][idx] / (np.sum(conf_matrix[idx]))
+        # Recall(a) = TP(c) / (TP(c) + FN(c))
+        recalls[idx] = conf_matrix[idx][idx] / (np.sum(conf_matrix[:, idx]))
+        # F1-score(c) = (2 * Precision(c) * Recall(c)) / (Precision(c) + Recall(c))
+        f1_scores[idx] = (2 * precisions[idx] * recalls[idx]) / (precisions[idx] + recalls[idx])
+
+    # The obtained metrics are merged to be plotted
+    table_data = np.stack((precisions, recalls, f1_scores), axis=1) 
+    col_labels = ["Precision", "Recall", "F1-score"]
+
+    # Plotting the table containing precision, recall and F1-score for each activity 
+    fig, ax = plt.subplots()
+    fig.patch.set_visible(False)
+    ax.axis('off')
+
+    table = ax.table(cellText=np.round(table_data, 2), colLabels=col_labels, rowLabels=labels, loc="center", cellLoc="center")
+    table.scale(1, 1.5)
+    table.auto_set_font_size(False)
+    table.set_fontsize(12)
+
+    fig.tight_layout()
     plt.show()

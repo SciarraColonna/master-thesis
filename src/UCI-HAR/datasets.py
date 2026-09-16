@@ -6,7 +6,6 @@ import numpy as np
 import math
 
 
-
 DATA_PARAMS = {
     "num_classes": 6,
     "num_channels": 9,
@@ -36,14 +35,14 @@ signals_path = [
 ]
 
 
-"""
-This function splits the train Dataset object into a proper train split and a validation split, divided according to a specific 
-percentage of the train subjects.
-The "validation_split" parameter indicates the percentage of the training subjects (21) that must be included in the validation
-split. In particular, the first (1-p)*100 % of the train subjects are used for the training split and the remaining p*100 % are
-used for the validation split.
-The function produces two Subset objects.
-"""
+###
+# The function splits the train Dataset object into a proper pair of train split and validation split, set according to a specific 
+# percentage of the train subjects.
+# # The "validation_split" parameter indicates the percentage of the training subjects (21) that must be included in the validation
+# split. In particular, the first (1-p)*100 % of the train subjects are used for the training split and the remaining p*100 % are
+# used for the validation split.
+# The function produces two Subset objects.
+###
 def split_for_validation (train_dataset):
     # Number of subjects for the validation split
     val_subjects_split = math.floor(DATA_PARAMS["validation_split"] * DATA_PARAMS["train_subjects"])
@@ -71,10 +70,10 @@ def split_for_validation (train_dataset):
     return (train_subset, validation_subset)
 
 
-"""
-Dataset class corresponding to the UCI-HAR dataset without the concepts.
-For each row, the class returns the corresponding data sample and the related activity label.
-"""
+###
+# Dataset class corresponding to the UCI-HAR dataset without the concepts.
+# For each row, the class returns the corresponding data sample and the related activity label.
+###
 class HARDataset (Dataset):
     def __init__ (self, type):
         # Activity labels
@@ -103,10 +102,10 @@ class HARDataset (Dataset):
         return sample, label
 
 
-"""
-Dataset class corresponding to the UCI-HAR dataset with the concepts.
-For each row, the class returns the corresponding data sample and the related activity label together with the concepts values.
-"""
+###
+# Dataset class corresponding to the UCI-HAR dataset with the concepts.
+# For each row, the class returns the corresponding data sample and the related activity label together with the concepts values.
+###
 class ConceptHARDataset (Dataset):
     def __init__ (self, type):
         # Activity labels
