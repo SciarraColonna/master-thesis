@@ -327,5 +327,5 @@ def save_model(best_model, concepts=False):
 
 
 if __name__ == "__main__":
-    best_model = baseline_train()
-    #save_model(best_model, concepts=True)
+    best_model = concept_train()
+    save_model(best_model, concepts=True)

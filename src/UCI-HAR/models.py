@@ -5,7 +5,7 @@ from datasets import DATA_PARAMS
 from concepts import CONCEPTS_LAYER_DIM, CONCEPTS_MAP
 
 
-ENCODER_OUT_DIM = 16
+ENCODER_OUT_DIM = 32
 LATENT_DIM = 8
 
 # Common training hyperparameters
@@ -39,19 +39,22 @@ class SignalEncoder (nn.Module):
     def __init__ (self):
         super().__init__()
 
-        self.conv1 = nn.Conv1d(in_channels=DATA_PARAMS["num_channels"], out_channels=32, kernel_size=5)
-        self.conv2 = nn.Conv1d(in_channels=32, out_channels=16, kernel_size=3)
+        self.conv1 = nn.Conv1d(in_channels=DATA_PARAMS["num_channels"], out_channels=32, kernel_size=9)
+        self.conv2 = nn.Conv1d(in_channels=32, out_channels=64, kernel_size=5)
+        self.conv3 = nn.Conv1d(in_channels=64, out_channels=32, kernel_size=3)
 
         self.activation = nn.ReLU()
         self.pooling = nn.MaxPool1d(kernel_size=2)
         self.batchNorm1 = nn.BatchNorm1d(num_features=32, affine=True)
-        self.batchNorm2 = nn.BatchNorm1d(num_features=16, affine=True)
-        self.globAvgPoolong = nn.AdaptiveAvgPool1d(1)
+        self.batchNorm2 = nn.BatchNorm1d(num_features=64, affine=True)
+        self.batchNorm3 = nn.BatchNorm1d(num_features=32, affine=True)
+        self.globAvgPooling = nn.AdaptiveAvgPool1d(1)
 
     def forward (self, x):
         x = self.batchNorm1(self.pooling(self.activation(self.conv1(x))))
         x = self.batchNorm2(self.pooling(self.activation(self.conv2(x))))
-        x = torch.flatten(self.globAvgPoolong(x), 1)
+        x = self.batchNorm3(self.pooling(self.activation(self.conv3(x))))
+        x = torch.flatten(self.globAvgPooling(x), 1)
 
         return x
 

@@ -6,8 +6,8 @@ from random import randrange
 import matplotlib.pyplot as plt
 
 from models import SignalEncoder, ConceptHead, TaskHead, HYPERPARAMETERS
-from datasets import ConceptHARDataset, HARDataset
-from concepts import concept_criterion
+from datasets import ConceptHARDataset, HARDataset, DATA_PARAMS
+from concepts import concept_criterion, WINDOW_TIMESTEPS
 from metrics import accuracy, batch_accuracy, plot_conf_matrix, plot_accuracy_per_subject
 
 
@@ -121,9 +121,10 @@ def concept_inference ():
 # of the test set.
 ###
 def plot_test_sample (sample):
-    x = np.linspace(0, 2.56, 128)
+    x = np.linspace(0, 2.56, WINDOW_TIMESTEPS)
 
-    for i in range(0, 9, 3):
+    for i in range(0, DATA_PARAMS["num_channels"], 3):
+        plt.figure(figsize=(10, 6))
         if i == 0: plt.title("Body acceleration (g)")
         if i == 3: plt.title("Angular velocity (rad/s)")
         if i == 6: plt.title("Total body acceleration (g)")
@@ -132,7 +133,7 @@ def plot_test_sample (sample):
         plt.plot(x, sample[i + 1], label="Y axis")
         plt.plot(x, sample[i + 2], label="Z axis")
         plt.legend()
-        plt.ylim((-3, 3))
+        plt.yticks(np.arange(-3, 3.2, 0.2))
         plt.show()
 
 
@@ -167,6 +168,7 @@ def single_concept_inference ():
     pred_concepts = out_concepts.tolist()
     pred_labels = torch.softmax(out_labels, dim=1).tolist()
 
+
     print("Predicted concepts:", [round(val, 2) for val in pred_concepts[0]])
     print("Predicted label:", [round(val, 2) for val in pred_labels[0]])
     print("\n")
@@ -176,4 +178,4 @@ def single_concept_inference ():
 
 
 if __name__ == "__main__":
-    baseline_inference()
+    concept_inference()

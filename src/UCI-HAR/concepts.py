@@ -152,16 +152,16 @@ def concept_labeling (type, tilting_centroids, std_centroids):
 
         # Labeling the "energy level" of the X component of the total acceleration, categorizing it with respect to
         # three possible values (0, 1 and 2 for low, medium and high energy)
-        if activities[idx] > 3:
+        """if activities[idx] > 3:
             energy_level = 0
-        else:
-            std = np.std(tot_acc_x[idx])
-            distances = np.empty((3,))
+        else:"""
+        std = np.std(tot_acc_x[idx])
+        distances = np.empty((3,))
 
-            for i in range(0, 3):
-                distances[i] = abs(std_centroids[i] - std)
+        for i in range(0, 3):
+            distances[i] = abs(std_centroids[i] - std)
 
-            energy_level = np.argmin(distances)
+        energy_level = np.argmin(distances)
 
         for level in range(0, 3):
             if level == int(energy_level):
