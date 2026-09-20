@@ -22,16 +22,20 @@ HYPERPARAMETERS = {
 
 # Model structure summary.
 # Input:              [N, 9, 128]
-# Conv1:              [N, 9, 128] -> [N, 32, 124]
+# Conv1:              [N, 9, 128] -> [N, 32, 120]
 # Activation:         no change
-# Pooling1:           [N, 32, 124] -> [N, 32, 62]
+# Pooling1:           [N, 32, 120] -> [N, 32, 60]
 # BatchNorm1:         no change
-# Conv2:              [N, 32, 62] -> [N, 16, 60]
+# Conv2:              [N, 32, 62] -> [N, 64, 56]
 # Activation:         no change
-# Pooling2:           [N, 16, 60] -> [N, 16, 30]
+# Pooling2:           [N, 64, 60] -> [N, 64, 28]
 # BatchNorm2:         no change
-# GlobAvgPooling:     [N, 16, 30] -> [N, 16, 1]
-# Flatten:            [N, 16, 1] -> [N, 16]
+# Conv3:              [N, 64, 62] -> [N, 32, 14]
+# Activation:         no change
+# Pooling3:           [N, 32, 14] -> [N, 32, 7]
+# BatchNorm2:         no change
+# GlobAvgPooling:     [N, 32, 30] -> [N, 32, 1]
+# Flatten:            [N, 32, 1] -> [N, 32]
 
 # (N = batch size)
 ###
